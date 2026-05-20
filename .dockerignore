@@ -1,0 +1,13 @@
+.git
+.venv
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.log
+local_server_output/
+ocr_demo_output/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.DS_Store
