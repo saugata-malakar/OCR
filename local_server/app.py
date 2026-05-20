@@ -11,6 +11,9 @@ from pathlib import Path
 from flask import Flask, abort, redirect, render_template, request, send_from_directory, url_for
 from paddleocr import PaddleOCR
 from werkzeug.utils import secure_filename
+from uuid import uuid4
+from datetime import datetime
+from typing import Dict, Any
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -18,6 +21,8 @@ OUTPUT_DIR = REPO_ROOT / "local_server_output"
 UPLOAD_DIR = OUTPUT_DIR / "uploads"
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+JOB_DIR = OUTPUT_DIR / "jobs"
+JOB_DIR.mkdir(parents=True, exist_ok=True)
 
 ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "bmp", "webp"}
 
@@ -50,6 +55,20 @@ def _start_warmup() -> None:
         return
     _warmup_started = True
     threading.Thread(target=_warmup_ocr, daemon=True).start()
+
+
+def _write_status(job_dir: Path, data: Dict[str, Any]) -> None:
+    (job_dir / "status.json").write_text(json.dumps(data), encoding="utf-8")
+
+
+def _read_status(job_dir: Path) -> Dict[str, Any]:
+    p = job_dir / "status.json"
+    if not p.exists():
+        return {}
+    try:
+        return json.loads(p.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
 
 
 def _allowed_file(filename: str) -> bool:
@@ -86,6 +105,115 @@ def healthz():
 @app.route("/uploads/<path:filename>")
 def uploads(filename: str):
     return send_from_directory(UPLOAD_DIR.as_posix(), filename)
+
+
+@app.route('/job_files/<job_id>/<path:filename>')
+def job_files(job_id: str, filename: str):
+    job_dir = JOB_DIR / job_id
+    if not job_dir.exists():
+        abort(404)
+    return send_from_directory(job_dir.as_posix(), filename)
+
+
+@app.route('/status/<job_id>')
+def job_status(job_id: str):
+    job_dir = JOB_DIR / job_id
+    if not job_dir.exists():
+        return {"status": "not_found"}, 404
+    return _read_status(job_dir)
+
+
+@app.route('/result/<job_id>')
+def job_result(job_id: str):
+    job_dir = JOB_DIR / job_id
+    if not job_dir.exists():
+        return {"status": "not_found"}, 404
+    status = _read_status(job_dir)
+    if status.get('status') != 'done':
+        return status, 202
+    # Build result payload
+    results = {
+        'status': 'done',
+        'result_texts': status.get('result_texts', []),
+        'result_summary': status.get('result_summary'),
+        'annotated_url': url_for('job_files', job_id=job_id, filename=status.get('annotated_file')) if status.get('annotated_file') else None,
+        'output_files': [url_for('job_files', job_id=job_id, filename=p) for p in status.get('output_files', [])],
+    }
+    return results
+
+
+def _process_job(job_id: str, save_path: Path, filename: str) -> None:
+    job_dir = JOB_DIR / job_id
+    job_dir.mkdir(parents=True, exist_ok=True)
+    _write_status(job_dir, {"status": "running", "created_at": datetime.utcnow().isoformat()})
+    try:
+        result = _get_ocr().predict(str(save_path))
+
+        summary_buffer = io.StringIO()
+        for item in result:
+            if hasattr(item, "print"):
+                with redirect_stdout(summary_buffer):
+                    item.print()
+
+        output_files: list[str] = []
+        annotated_file: str | None = None
+        for idx, item in enumerate(result, start=1):
+            if hasattr(item, "save_to_img"):
+                item.save_to_img(str(job_dir))
+            if hasattr(item, "save_to_json"):
+                json_path = job_dir / f"result_{idx}.json"
+                item.save_to_json(str(json_path))
+                output_files.append(json_path.name)
+
+        texts = _collect_result_texts(job_dir)
+        scores = _collect_result_scores(job_dir)
+        annotated_files = list(job_dir.glob("**/*.png"))
+        if annotated_files:
+            annotated_file = annotated_files[0].name
+
+        status_payload = {
+            "status": "done",
+            "created_at": datetime.utcnow().isoformat(),
+            "result_texts": texts,
+            "result_summary": summary_buffer.getvalue().strip(),
+            "output_files": output_files,
+            "annotated_file": annotated_file,
+            "avg_score": round(sum(scores) / len(scores), 3) if scores else None,
+        }
+        _write_status(job_dir, status_payload)
+    except Exception as e:
+        _write_status(job_dir, {"status": "failed", "error": str(e)})
+
+
+@app.route('/upload_async', methods=['POST'])
+def upload_async():
+    if 'image' not in request.files:
+        return {"error": "no file"}, 400
+    file = request.files['image']
+    if file.filename == '':
+        return {"error": "empty filename"}, 400
+    if not _allowed_file(file.filename):
+        return {"error": "unsupported file type"}, 400
+
+    filename = secure_filename(file.filename)
+    save_path = UPLOAD_DIR / filename
+    file.save(save_path)
+
+    job_id = uuid4().hex
+    job_dir = JOB_DIR / job_id
+    job_dir.mkdir(parents=True, exist_ok=True)
+    _write_status(job_dir, {"status": "pending", "created_at": datetime.utcnow().isoformat()})
+
+    threading.Thread(target=_process_job, args=(job_id, save_path, filename), daemon=True).start()
+
+    return (
+        {
+            "job_id": job_id,
+            "status_url": url_for('job_status', job_id=job_id, _external=True),
+            "result_url": url_for('job_result', job_id=job_id, _external=True),
+        },
+        202,
+    )
 
 
 @app.route("/", methods=["GET", "POST"])

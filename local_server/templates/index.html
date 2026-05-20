@@ -43,7 +43,7 @@
       </section>
 
       <section class="workspace-card">
-        <form class="upload-panel" method="post" enctype="multipart/form-data">
+        <form id="uploadForm" class="upload-panel" method="post" enctype="multipart/form-data">
           <div id="dropzone" class="dropzone">
             <input id="image" type="file" name="image" accept="image/png,image/jpeg,image/webp,image/bmp" required>
             <div class="dropzone-icon">⌁</div>
@@ -55,8 +55,11 @@
           </div>
 
           <button class="primary-btn" type="submit">Run OCR</button>
+          <div id="asyncStatus" class="async-status" aria-live="polite"></div>
           <p class="hint">The server saves a JSON result and an annotated image for every upload.</p>
         </form>
+
+        <div id="asyncResults"></div>
 
         {% if result_texts is not none %}
         <div class="results-stack">
