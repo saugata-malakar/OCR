@@ -1,0 +1,39 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+.ipynb_checkpoints/
+*.py[cod]
+*$py.class
+
+# Build / packaging
+build/
+dist/
+*.egg-info/
+
+# Virtual environments and caches
+.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.worktrees/
+
+# Logs and generated outputs
+*.log
+local_server_output/
+ocr_demo_output/
+inference/
+inference_results/
+output/
+train_data/
+log/
+
+# Editor / OS files
+*.DS_Store
+*.vs
+*.user
+*~
+*.vscode
+*.idea
+
+# Project-specific generated assets
+test_tipc/web/models/
+test_tipc/web/node_modules/

@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PaddleOCR Studio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+  <div class="page-shell">
+    <div class="backdrop backdrop-a"></div>
+    <div class="backdrop backdrop-b"></div>
+
+    <main class="app-grid">
+      <section class="hero-card">
+        <div class="eyebrow">Local OCR Studio</div>
+        <h1>Upload an image and turn it into readable text.</h1>
+        <p class="lede">A polished PaddleOCR workspace for fast local inference, annotated previews, and exported JSON artifacts. Built for browser use and Render deployment.</p>
+
+        <div class="hero-metrics">
+          <div class="metric">
+            <span class="metric-label">Text regions</span>
+            <strong>{{ stats.text_count or 0 }}</strong>
+          </div>
+          <div class="metric">
+            <span class="metric-label">Artifacts</span>
+            <strong>{{ stats.artifact_count or 0 }}</strong>
+          </div>
+          <div class="metric">
+            <span class="metric-label">Avg. score</span>
+            <strong>{{ stats.avg_score if stats.avg_score is not none else "--" }}</strong>
+          </div>
+        </div>
+
+        <div class="hero-notes">
+          <div class="note-pill">Drag & drop</div>
+          <div class="note-pill">PNG / JPG / WEBP</div>
+          <div class="note-pill">Annotated output</div>
+        </div>
+      </section>
+
+      <section class="workspace-card">
+        <form class="upload-panel" method="post" enctype="multipart/form-data">
+          <div id="dropzone" class="dropzone">
+            <input id="image" type="file" name="image" accept="image/png,image/jpeg,image/webp,image/bmp" required>
+            <div class="dropzone-icon">⌁</div>
+            <div class="dropzone-copy">
+              <strong>Drop your image here</strong>
+              <span>or choose a file to start OCR</span>
+            </div>
+            <div class="dropzone-file" id="fileName">No file selected</div>
+          </div>
+
+          <button class="primary-btn" type="submit">Run OCR</button>
+          <p class="hint">The server saves a JSON result and an annotated image for every upload.</p>
+        </form>
+
+        {% if result_texts is not none %}
+        <div class="results-stack">
+          <section class="results-card">
+            <div class="section-heading">
+              <h2>Recognized text</h2>
+              <span>{{ result_texts|length }} items</span>
+            </div>
+            {% if result_texts %}
+            <div class="text-grid">
+              {% for t in result_texts %}
+              <span class="text-chip">{{ t }}</span>
+              {% endfor %}
+            </div>
+            {% else %}
+            <p class="empty-state">OCR completed successfully, but no text snippets were extracted from this image.</p>
+            {% endif %}
+          </section>
+
+          <section class="results-card results-card-split">
+            <div>
+              <div class="section-heading">
+                <h2>OCR summary</h2>
+              </div>
+              <pre class="summary-block">{{ result_summary }}</pre>
+            </div>
+
+            <div>
+              <div class="section-heading">
+                <h2>Preview</h2>
+              </div>
+              {% if annotated_relpath %}
+                <img class="result-image" src="/{{ annotated_relpath }}" alt="Annotated OCR result">
+              {% elif source_path %}
+                <img class="result-image" src="/{{ source_path }}" alt="Uploaded image preview">
+              {% else %}
+                <div class="empty-preview">No preview available.</div>
+              {% endif %}
+            </div>
+          </section>
+
+          {% if output_files %}
+          <section class="results-card">
+            <div class="section-heading">
+              <h2>Saved artifacts</h2>
+            </div>
+            <div class="artifact-list">
+              {% for path in output_files %}
+              <a class="artifact-link" href="/{{ path }}" target="_blank" rel="noreferrer">{{ path }}</a>
+              {% endfor %}
+            </div>
+          </section>
+          {% endif %}
+        </div>
+        {% endif %}
+      </section>
+    </main>
+  </div>
+
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>
