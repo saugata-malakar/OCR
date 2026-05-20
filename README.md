@@ -31,3 +31,6 @@ Credits
 - This project bundles and integrates the PaddleOCR toolkit. See `PaddleOCR-main/README.md` for the upstream project documentation and licensing.
 
 If you want, I can add a short banner page or README content directly to the live site homepage. Tell me what text or links you want shown.
+
+<!-- Redeploy trigger: update to force Render to rebuild the service -->
+Redeploy trigger: 2026-05-20T00:00:00Z
