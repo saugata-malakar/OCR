@@ -2,7 +2,8 @@ FROM python:3.11-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PIP_NO_CACHE_DIR=1
+    PIP_NO_CACHE_DIR=1 \
+    PYTHONPATH=/app/PaddleOCR-main:/app
 
 WORKDIR /app
 
@@ -15,8 +16,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY . /app
 
 RUN python -m pip install --upgrade pip setuptools wheel \
-    && python -m pip install -e ./PaddleOCR-main \
-    && python -m pip install flask gunicorn
+    && python -m pip install -r ./PaddleOCR-main/requirements.txt \
+    && python -m pip install "paddlex[ocr-core]>=3.5.0,<3.6.0" flask gunicorn \
+    && python -m pip install paddlepaddle
 
 EXPOSE 10000
 
