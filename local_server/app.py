@@ -24,6 +24,7 @@ ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "bmp", "webp"}
 app = Flask(__name__, template_folder="templates", static_folder="static")
 _ocr_lock = threading.Lock()
 _ocr: PaddleOCR | None = None
+_warmup_started = False
 
 
 def _get_ocr() -> PaddleOCR:
@@ -33,6 +34,22 @@ def _get_ocr() -> PaddleOCR:
             if _ocr is None:
                 _ocr = PaddleOCR(engine=os.getenv("OCR_ENGINE", "paddle"))
     return _ocr
+
+
+def _warmup_ocr() -> None:
+    try:
+        _get_ocr()
+    except Exception:
+        # Warmup is best-effort; the first real OCR request will surface any error.
+        pass
+
+
+def _start_warmup() -> None:
+    global _warmup_started
+    if _warmup_started:
+        return
+    _warmup_started = True
+    threading.Thread(target=_warmup_ocr, daemon=True).start()
 
 
 def _allowed_file(filename: str) -> bool:
@@ -139,6 +156,13 @@ def index():
         output_files=output_files,
         stats=stats,
     )
+
+
+@app.before_request
+def _ensure_warmup_started() -> None:
+    # Start model initialization in the background so the service stays responsive.
+    if request.method == "GET":
+        _start_warmup()
 
 
 if __name__ == "__main__":
