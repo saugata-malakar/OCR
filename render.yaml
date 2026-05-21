@@ -1,12 +1,7 @@
 services:
   - type: web
     name: paddleocr-studio
-    env: python
+    runtime: docker
     plan: free
-    buildCommand: >
-      python -m pip install --upgrade pip &&
-      python -m pip install -r requirements.txt &&
-      python -m pip install flask gunicorn paddleocr paddlepaddle
-    startCommand: gunicorn -w 1 -b 0.0.0.0:$PORT local_server.app:app
     healthCheckPath: /healthz
     autoDeploy: true
