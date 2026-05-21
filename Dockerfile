@@ -22,4 +22,4 @@ RUN python -m pip install --upgrade pip setuptools wheel \
 
 EXPOSE 10000
 
-CMD ["sh", "-c", "gunicorn -w 1 --timeout 300 --graceful-timeout 300 -b 0.0.0.0:${PORT:-10000} local_server.app:app"]
+CMD ["sh", "-c", "gunicorn -w 1 --threads 4 --timeout 300 --graceful-timeout 300 -b 0.0.0.0:${PORT:-10000} local_server.app:app"]

@@ -5,3 +5,12 @@ services:
     plan: free
     healthCheckPath: /healthz
     autoDeploy: true
+    envVars:
+      - key: OCR_ENGINE
+        value: paddle
+      - key: OCR_VERSION
+        value: PP-OCRv4
+      - key: OCR_LANG
+        value: en
+      - key: OCR_CPU_THREADS
+        value: "1"

@@ -1,8 +1,14 @@
 from __future__ import annotations
 
+import os
+os.environ["OMP_NUM_THREADS"] = "1"
+os.environ["MKL_NUM_THREADS"] = "1"
+os.environ["OPENBLAS_NUM_THREADS"] = "1"
+os.environ["VECLIB_MAXIMUM_THREADS"] = "1"
+os.environ["NUMEXPR_NUM_THREADS"] = "1"
+
 import io
 import json
-import os
 import threading
 from collections.abc import Iterable
 from contextlib import redirect_stdout
@@ -40,7 +46,12 @@ def _get_ocr():
         with _ocr_lock:
             if _ocr is None:
                 from paddleocr import PaddleOCR
-                _ocr = PaddleOCR(engine=os.getenv("OCR_ENGINE", "paddle"))
+                _ocr = PaddleOCR(
+                    engine=os.getenv("OCR_ENGINE", "paddle"),
+                    ocr_version=os.getenv("OCR_VERSION", "PP-OCRv4"),
+                    lang=os.getenv("OCR_LANG", "en"),
+                    cpu_threads=int(os.getenv("OCR_CPU_THREADS", "1")),
+                )
     return _ocr
 
 
