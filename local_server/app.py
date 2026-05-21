@@ -11,6 +11,7 @@ from pathlib import Path
 from flask import Flask, abort, redirect, render_template, request, send_from_directory, url_for
 # PaddleOCR is imported lazily inside _get_ocr() to avoid blocking worker startup
 from werkzeug.utils import secure_filename
+from werkzeug.middleware.proxy_fix import ProxyFix
 from uuid import uuid4
 from datetime import datetime
 from typing import Dict, Any
@@ -27,6 +28,7 @@ JOB_DIR.mkdir(parents=True, exist_ok=True)
 ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "bmp", "webp"}
 
 app = Flask(__name__, template_folder="templates", static_folder="static")
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 _ocr_lock = threading.Lock()
 _ocr: PaddleOCR | None = None
 _warmup_started = False
@@ -210,8 +212,8 @@ def upload_async():
     return (
         {
             "job_id": job_id,
-            "status_url": url_for('job_status', job_id=job_id, _external=True),
-            "result_url": url_for('job_result', job_id=job_id, _external=True),
+            "status_url": url_for('job_status', job_id=job_id),
+            "result_url": url_for('job_result', job_id=job_id),
         },
         202,
     )
