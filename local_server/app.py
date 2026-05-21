@@ -7,6 +7,11 @@ os.environ["OPENBLAS_NUM_THREADS"] = "1"
 os.environ["VECLIB_MAXIMUM_THREADS"] = "1"
 os.environ["NUMEXPR_NUM_THREADS"] = "1"
 
+# Limit memory allocations to prevent OOM
+os.environ["MALLOC_ARENA_MAX"] = "2"
+os.environ["FLAGS_allocator_strategy"] = "naive"
+os.environ["FLAGS_eager_delete_tensor_gb"] = "0.0"
+
 import io
 import json
 import threading

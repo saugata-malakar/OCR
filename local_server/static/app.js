@@ -76,11 +76,19 @@ if (uploadForm) {
       const poll = setInterval(async () => {
         try {
           const s = await fetch(statusUrl);
+          if (!s.ok) {
+            const txt = await s.text();
+            throw new Error(`Server returned status ${s.status}: ${txt.substring(0, 100)}`);
+          }
           const data = await s.json();
           if (data.status === 'done') {
             clearInterval(poll);
             asyncStatus.textContent = 'Processing complete — fetching results…';
             const r = await fetch(resultUrl);
+            if (!r.ok) {
+              const txt = await r.text();
+              throw new Error(`Failed to fetch results (status ${r.status}): ${txt.substring(0, 100)}`);
+            }
             const res = await r.json();
             renderResults(res);
             asyncStatus.textContent = 'Ready';
@@ -92,7 +100,7 @@ if (uploadForm) {
           }
         } catch (err) {
           console.error(err);
-          asyncStatus.textContent = 'Error polling job status';
+          asyncStatus.textContent = 'Error polling job status: ' + err.message;
           clearInterval(poll);
         }
       }, 2000);

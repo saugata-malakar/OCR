@@ -14,3 +14,9 @@ services:
         value: en
       - key: OCR_CPU_THREADS
         value: "1"
+      - key: MALLOC_ARENA_MAX
+        value: "2"
+      - key: FLAGS_allocator_strategy
+        value: naive
+      - key: FLAGS_eager_delete_tensor_gb
+        value: "0.0"
