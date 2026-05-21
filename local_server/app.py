@@ -9,7 +9,7 @@ from contextlib import redirect_stdout
 from pathlib import Path
 
 from flask import Flask, abort, redirect, render_template, request, send_from_directory, url_for
-from paddleocr import PaddleOCR
+# PaddleOCR is imported lazily inside _get_ocr() to avoid blocking worker startup
 from werkzeug.utils import secure_filename
 from uuid import uuid4
 from datetime import datetime
@@ -32,11 +32,12 @@ _ocr: PaddleOCR | None = None
 _warmup_started = False
 
 
-def _get_ocr() -> PaddleOCR:
+def _get_ocr():
     global _ocr
     if _ocr is None:
         with _ocr_lock:
             if _ocr is None:
+                from paddleocr import PaddleOCR
                 _ocr = PaddleOCR(engine=os.getenv("OCR_ENGINE", "paddle"))
     return _ocr
 
